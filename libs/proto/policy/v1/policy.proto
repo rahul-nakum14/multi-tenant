@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package policy.v1;
+
+option go_package = "github.com/saas/proto/policy/v1;policyv1";
+
+// Placeholder for policy service proto definitions
+// Will include: RBAC, ABAC, permission evaluation RPCs

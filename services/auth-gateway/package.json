@@ -1,0 +1,6 @@
+{
+  "name": "@saas/auth-gateway",
+  "version": "0.0.1",
+  "description": "OAuth2/OIDC Authentication Gateway",
+  "private": true
+}

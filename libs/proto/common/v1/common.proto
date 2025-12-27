@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/saas/proto/common/v1;commonv1";
+
+// Placeholder for common proto definitions
+// Will include: pagination, errors, metadata, etc.

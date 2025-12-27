@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package identity.v1;
+
+option go_package = "github.com/saas/proto/identity/v1;identityv1";
+
+// Placeholder for identity service proto definitions
+// Will include: User, Organization, tenant management RPCs

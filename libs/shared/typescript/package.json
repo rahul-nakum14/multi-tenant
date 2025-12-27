@@ -1,0 +1,7 @@
+{
+    "name": "@saas/shared-typescript",
+    "version": "0.0.1",
+    "description": "Shared TypeScript utilities and libraries",
+    "private": true,
+    "main": "index.ts"
+}

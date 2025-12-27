@@ -1,0 +1,9 @@
+{
+    "name": "@saas/infra-cdk",
+    "version": "0.0.1",
+    "description": "AWS CDK Infrastructure as Code",
+    "private": true,
+    "scripts": {
+        "cdk": "cdk"
+    }
+}

@@ -1,0 +1,6 @@
+{
+    "name": "@saas/billing-service",
+    "version": "0.0.1",
+    "description": "Subscription and Payment Management Service",
+    "private": true
+}
