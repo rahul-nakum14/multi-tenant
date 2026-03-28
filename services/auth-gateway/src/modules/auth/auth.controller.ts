@@ -15,6 +15,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from './interfaces/jwt-payload.interface';
 
@@ -89,7 +90,7 @@ export class AuthController {
 
     @Post('logout')
     @HttpCode(HttpStatus.OK)
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, TenantGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Logout (revokes refresh token)' })
     @ApiResponse({ status: 200, description: 'Logged out' })
@@ -107,11 +108,12 @@ export class AuthController {
     }
 
     @Get('me')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, TenantGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get current user profile' })
     @ApiResponse({ status: 200, description: 'Current user' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Tenant invalid or missing' })
     getProfile(@CurrentUser() user: AuthenticatedUser) {
         return { success: true, user };
     }

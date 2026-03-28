@@ -6,7 +6,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
-import { JwtPayload, AuthenticatedUser } from '../interfaces/jwt-payload.interface';
+import type { JwtPayload, AuthenticatedUser } from '../interfaces/jwt-payload.interface';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -21,17 +21,24 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
-                (request: Request) => {
-                    return request?.cookies?.['access_token'];
-                },
+                (request: Request) => request?.cookies?.['access_token'],
             ]),
             ignoreExpiration: false,
             secretOrKey: publicKey,
             algorithms: ['RS256'],
+            passReqToCallback: true,
         });
     }
 
-    async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
-        return this.authService.validateUser(payload.sub, payload.tenant_id);
+    async validate(req: Request, payload: JwtPayload): Promise<AuthenticatedUser> {
+        if (!payload.tenant_id) {
+            throw new Error('JWT missing tenant_id');
+        }
+
+        const user = await this.authService.validateUser(payload.sub, payload.tenant_id);
+
+        req.tenantId = user.tenantId;
+
+        return user;
     }
 }
