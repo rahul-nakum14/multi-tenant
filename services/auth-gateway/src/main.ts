@@ -2,18 +2,21 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER, WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { API_PREFIX, API_VERSION } from './common/constants';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    bufferLogs: true,
-  });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
-  app.useLogger(logger);
+  const nestLogger = app.get(WINSTON_MODULE_NEST_PROVIDER);
+  const winstonLogger = app.get<Logger>(WINSTON_MODULE_PROVIDER);
+
+  app.useLogger(nestLogger);
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port')!;
@@ -32,16 +35,18 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
+  app.useGlobalFilters(new AllExceptionsFilter(winstonLogger));
+  app.useGlobalInterceptors(new LoggingInterceptor(winstonLogger));
+
   app.enableCors({
-    origin: configService.get<string>('app.nodeEnv') === 'production'
-      ? ['https://app.example.com']
-      : true,
+    origin:
+      configService.get<string>('app.nodeEnv') === 'production'
+        ? ['https://app.example.com']
+        : true,
     credentials: true,
   });
 
@@ -56,14 +61,35 @@ async function bootstrap() {
     .addTag('health', 'Health check endpoints')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(`${API_PREFIX}/docs`, app, document);
+  SwaggerModule.setup(
+    `${API_PREFIX}/docs`,
+    app,
+    SwaggerModule.createDocument(app, config),
+  );
+
+  app.enableShutdownHooks();
 
   await app.listen(port);
 
-  logger.log(`Application is running on: http://localhost:${port}/${API_PREFIX}`, 'Bootstrap');
-  logger.log(`Swagger documentation: http://localhost:${port}/${API_PREFIX}/docs`, 'Bootstrap');
-  logger.log(`Health check: http://localhost:${port}/health`, 'Bootstrap');
+  winstonLogger.info('Service started', {
+    port,
+    env: configService.get<string>('app.nodeEnv'),
+    prefix: API_PREFIX,
+    version: API_VERSION,
+    docs: `http://localhost:${port}/${API_PREFIX}/docs`,
+  });
+
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.on(signal, async () => {
+      winstonLogger.info(`Received ${signal}, shutting down gracefully`);
+      await app.close();
+      winstonLogger.info('Server closed');
+      process.exit(0);
+    });
+  }
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Fatal bootstrap error', err);
+  process.exit(1);
+});
