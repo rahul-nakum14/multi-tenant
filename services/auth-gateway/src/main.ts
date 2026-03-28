@@ -3,6 +3,7 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { API_PREFIX, API_VERSION } from './common/constants';
 
@@ -16,6 +17,8 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port')!;
+
+  app.use(cookieParser());
 
   app.setGlobalPrefix(API_PREFIX);
 
