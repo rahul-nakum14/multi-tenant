@@ -18,12 +18,17 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from './interfaces/jwt-payload.interface';
+import {
+    ACCESS_TOKEN_COOKIE,
+    REFRESH_TOKEN_COOKIE,
+    SESSION_ID_COOKIE,
+    ACCESS_TOKEN_TTL_MS,
+    REFRESH_TOKEN_TTL_MS,
+    REFRESH_COOKIE_PATH,
+    SESSION_COOKIE_PATH,
+} from '../../common/constants';
 
 const IS_PROD = process.env.NODE_ENV === 'production';
-
-const ACCESS_COOKIE = 'access_token';
-const REFRESH_COOKIE = 'refresh_token';
-const SESSION_COOKIE = 'session_id';
 
 const BASE_COOKIE_OPTIONS = {
     httpOnly: true,
@@ -72,9 +77,9 @@ export class AuthController {
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
     ) {
-        const refreshToken: string | undefined = req.cookies?.[REFRESH_COOKIE];
-        const sessionId: string | undefined = req.cookies?.[SESSION_COOKIE];
-        const rawAccess: string | undefined = req.cookies?.[ACCESS_COOKIE];
+        const refreshToken: string | undefined = req.cookies?.[REFRESH_TOKEN_COOKIE];
+        const sessionId: string | undefined = req.cookies?.[SESSION_ID_COOKIE];
+        const rawAccess: string | undefined = req.cookies?.[ACCESS_TOKEN_COOKIE];
         const userId = this.extractSubFromRawToken(rawAccess);
 
         if (!refreshToken || !sessionId || !userId) {
@@ -99,7 +104,7 @@ export class AuthController {
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
     ) {
-        const sessionId: string | undefined = req.cookies?.[SESSION_COOKIE];
+        const sessionId: string | undefined = req.cookies?.[SESSION_ID_COOKIE];
         if (sessionId) {
             await this.authService.logout(user.id, sessionId);
         }
@@ -124,28 +129,28 @@ export class AuthController {
         refreshToken: string,
         sessionId: string,
     ): void {
-        res.cookie(ACCESS_COOKIE, accessToken, {
+        res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
             ...BASE_COOKIE_OPTIONS,
-            maxAge: 15 * 60 * 1000,
+            maxAge: ACCESS_TOKEN_TTL_MS,
         });
 
-        res.cookie(REFRESH_COOKIE, refreshToken, {
+        res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, {
             ...BASE_COOKIE_OPTIONS,
-            path: '/api/v1/auth/refresh',
-            maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: REFRESH_COOKIE_PATH,
+            maxAge: REFRESH_TOKEN_TTL_MS,
         });
 
-        res.cookie(SESSION_COOKIE, sessionId, {
+        res.cookie(SESSION_ID_COOKIE, sessionId, {
             ...BASE_COOKIE_OPTIONS,
-            path: '/api/v1/auth',
-            maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: SESSION_COOKIE_PATH,
+            maxAge: REFRESH_TOKEN_TTL_MS,
         });
     }
 
     private clearAuthCookies(res: Response): void {
-        res.clearCookie(ACCESS_COOKIE, BASE_COOKIE_OPTIONS);
-        res.clearCookie(REFRESH_COOKIE, { ...BASE_COOKIE_OPTIONS, path: '/api/v1/auth/refresh' });
-        res.clearCookie(SESSION_COOKIE, { ...BASE_COOKIE_OPTIONS, path: '/api/v1/auth' });
+        res.clearCookie(ACCESS_TOKEN_COOKIE, BASE_COOKIE_OPTIONS);
+        res.clearCookie(REFRESH_TOKEN_COOKIE, { ...BASE_COOKIE_OPTIONS, path: REFRESH_COOKIE_PATH });
+        res.clearCookie(SESSION_ID_COOKIE, { ...BASE_COOKIE_OPTIONS, path: SESSION_COOKIE_PATH });
     }
 
     private extractSubFromRawToken(token: string | undefined): string | null {

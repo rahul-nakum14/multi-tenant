@@ -11,7 +11,6 @@ export const validationSchema = Joi.object({
 
     REDIS_URL: Joi.string().required(),
 
-    JWT_SECRET: Joi.string().required(),
     JWT_EXPIRY: Joi.string().default('15m'),
     JWT_REFRESH_EXPIRY: Joi.string().default('7d'),
 });

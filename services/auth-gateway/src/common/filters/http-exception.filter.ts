@@ -11,22 +11,19 @@ import { Request, Response } from 'express';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 
-const SENSITIVE_FIELDS = new Set([
-    'password',
-    'passwordHash',
-    'token',
-    'refreshToken',
+const SENSITIVE_HEADERS = new Set([
     'authorization',
     'cookie',
     'set-cookie',
 ]);
 
 function sanitizeHeaders(headers: Record<string, unknown>): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(headers)) {
-        result[key] = SENSITIVE_FIELDS.has(key.toLowerCase()) ? '[REDACTED]' : value;
-    }
-    return result;
+    return Object.fromEntries(
+        Object.entries(headers).map(([key, value]) => [
+            key,
+            SENSITIVE_HEADERS.has(key.toLowerCase()) ? '[REDACTED]' : value,
+        ]),
+    );
 }
 
 @Catch()
@@ -56,6 +53,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             method: req.method,
             path: req.path,
             statusCode: status,
+            headers: sanitizeHeaders(req.headers as Record<string, unknown>),
         };
 
         if (isServerError && this.logger) {
@@ -79,7 +77,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
         const body: Record<string, unknown> = {
             error: {
-                code: this.resolveCode(exception, status),
+                code: this.resolveCode(status),
                 message: isServerError
                     ? 'An unexpected error occurred'
                     : this.extractMessage(exception),
@@ -106,14 +104,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return exception.message;
     }
 
-    private resolveCode(exception: unknown, status: number): string {
-        if (status === 401) return 'UNAUTHORIZED';
-        if (status === 403) return 'FORBIDDEN';
-        if (status === 404) return 'NOT_FOUND';
-        if (status === 409) return 'CONFLICT';
-        if (status === 422) return 'UNPROCESSABLE';
-        if (status === 400) return 'BAD_REQUEST';
-        if (status >= 500) return 'INTERNAL_ERROR';
-        return 'ERROR';
+    private resolveCode(status: number): string {
+        const codes: Record<number, string> = {
+            400: 'BAD_REQUEST',
+            401: 'UNAUTHORIZED',
+            403: 'FORBIDDEN',
+            404: 'NOT_FOUND',
+            409: 'CONFLICT',
+            422: 'UNPROCESSABLE',
+        };
+        return codes[status] ?? (status >= 500 ? 'INTERNAL_ERROR' : 'ERROR');
     }
 }

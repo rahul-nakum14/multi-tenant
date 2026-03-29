@@ -4,12 +4,10 @@ import { Repository } from 'typeorm';
 import Redis from 'ioredis';
 import { Tenant } from './entities/tenant.entity';
 import { REDIS_CLIENT } from '../../infra/redis/redis.module';
+import { TENANT_CACHE_TTL_SECONDS, TENANT_CACHE_PREFIX } from '../../common/constants';
 
 @Injectable()
 export class TenantsService {
-    private readonly CACHE_TTL = 60;
-    private readonly CACHE_PREFIX = 'tenant:';
-
     constructor(
         @InjectRepository(Tenant)
         private readonly tenantRepository: Repository<Tenant>,
@@ -18,13 +16,13 @@ export class TenantsService {
     ) { }
 
     async validateTenant(id: string): Promise<Tenant> {
-        const cacheKey = `${this.CACHE_PREFIX}${id}`;
+        const cacheKey = `${TENANT_CACHE_PREFIX}:${id}`;
         const cached = await this.redis.get(cacheKey);
 
         if (cached) {
             const tenant = JSON.parse(cached) as Tenant;
             if (!tenant.isActive) {
-                throw new ForbiddenException(`Tenant ${id} is inactive`);
+                throw new ForbiddenException('Tenant access denied');
             }
             return tenant;
         }
@@ -32,19 +30,19 @@ export class TenantsService {
         const tenant = await this.tenantRepository.findOne({ where: { id } });
 
         if (!tenant) {
-            throw new ForbiddenException(`Tenant ${id} not found`);
+            throw new ForbiddenException('Invalid or unknown tenant');
         }
 
         if (!tenant.isActive) {
-            throw new ForbiddenException(`Tenant ${id} is inactive`);
+            throw new ForbiddenException('Tenant access denied');
         }
 
-        await this.redis.set(cacheKey, JSON.stringify(tenant), 'EX', this.CACHE_TTL);
+        await this.redis.set(cacheKey, JSON.stringify(tenant), 'EX', TENANT_CACHE_TTL_SECONDS);
 
         return tenant;
     }
 
     async invalidateCache(tenantId: string): Promise<void> {
-        await this.redis.del(`${this.CACHE_PREFIX}${tenantId}`);
+        await this.redis.del(`${TENANT_CACHE_PREFIX}:${tenantId}`);
     }
 }

@@ -11,6 +11,7 @@ import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenService } from './refresh-token.service';
+import { BCRYPT_SALT_ROUNDS, DEFAULT_USER_ROLE, ROLE_SCOPES } from '../../common/constants';
 import type {
     JwtPayload,
     AuthenticatedUser,
@@ -19,8 +20,6 @@ import type {
 
 @Injectable()
 export class AuthService {
-    private readonly SALT_ROUNDS = 12;
-
     constructor(
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
@@ -37,14 +36,14 @@ export class AuthService {
             throw new ConflictException('User already exists in this tenant');
         }
 
-        const passwordHash = await bcrypt.hash(dto.password, this.SALT_ROUNDS);
+        const passwordHash = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
         const user = this.userRepository.create({
             email: dto.email,
             passwordHash,
             tenantId: dto.tenantId,
             firstName: dto.firstName,
             lastName: dto.lastName,
-            role: dto.role || 'member',
+            role: DEFAULT_USER_ROLE,
         });
 
         const saved = await this.userRepository.save(user);
@@ -90,11 +89,7 @@ export class AuthService {
 
         const accessToken = await this.buildAccessToken(user);
 
-        return {
-            accessToken,
-            refreshToken: newRefreshToken,
-            sessionId: newSessionId,
-        };
+        return { accessToken, refreshToken: newRefreshToken, sessionId: newSessionId };
     }
 
     async logout(userId: string, sessionId: string): Promise<void> {
@@ -127,18 +122,9 @@ export class AuthService {
             sub: user.id,
             tenant_id: user.tenantId,
             role: user.role,
-            scope: this.getScopeForRole(user.role),
+            scope: ROLE_SCOPES[user.role] ?? ROLE_SCOPES['viewer'],
         };
         return this.jwtService.sign(payload);
-    }
-
-    private getScopeForRole(role: string): string {
-        const map: Record<string, string> = {
-            admin: 'read:all write:all delete:all',
-            member: 'read:own write:own',
-            viewer: 'read:own',
-        };
-        return map[role] ?? map['viewer'];
     }
 
     private mapToAuthenticatedUser(user: User): AuthenticatedUser {

@@ -1,8 +1,11 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsUUID, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsUUID, IsOptional, IsEnum } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { UserRole } from '../../../common/constants';
 
 export class RegisterDto {
     @ApiProperty({ example: 'user@example.com' })
+    @Transform(({ value }) => (typeof value === 'string' ? value.toLowerCase().trim() : value))
     @IsEmail()
     @IsNotEmpty()
     email: string;
@@ -27,9 +30,4 @@ export class RegisterDto {
     @IsString()
     @IsOptional()
     lastName?: string;
-
-    @ApiProperty({ example: 'member', required: false })
-    @IsString()
-    @IsOptional()
-    role?: string;
 }

@@ -12,7 +12,7 @@ export const getDatabaseConfig = (
     logging: configService.get<boolean>('app.database.logging'),
     ssl:
         configService.get<string>('app.nodeEnv') === 'production'
-            ? { rejectUnauthorized: false }
+            ? { rejectUnauthorized: true }
             : false,
 });
 

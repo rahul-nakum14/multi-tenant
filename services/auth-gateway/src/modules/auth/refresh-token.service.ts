@@ -3,28 +3,32 @@ import Redis from 'ioredis';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { REDIS_CLIENT } from '../../infra/redis/redis.module';
+import {
+    REFRESH_TOKEN_TTL_SECONDS,
+    REFRESH_TOKEN_HASH_ROUNDS,
+    REFRESH_TOKEN_BYTES,
+    SESSION_ID_BYTES,
+    REFRESH_TOKEN_REDIS_PREFIX,
+} from '../../common/constants';
 
 @Injectable()
 export class RefreshTokenService {
-    private readonly REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;
-    private readonly HASH_ROUNDS = 10;
-
     private redisKey(userId: string, sessionId: string): string {
-        return `refresh:${userId}:${sessionId}`;
+        return `${REFRESH_TOKEN_REDIS_PREFIX}:${userId}:${sessionId}`;
     }
 
     constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) { }
 
     async issue(userId: string): Promise<{ token: string; sessionId: string }> {
-        const token = crypto.randomBytes(64).toString('hex');
-        const sessionId = crypto.randomBytes(16).toString('hex');
-        const hashed = await bcrypt.hash(token, this.HASH_ROUNDS);
+        const token = crypto.randomBytes(REFRESH_TOKEN_BYTES).toString('hex');
+        const sessionId = crypto.randomBytes(SESSION_ID_BYTES).toString('hex');
+        const hashed = await bcrypt.hash(token, REFRESH_TOKEN_HASH_ROUNDS);
 
         await this.redis.set(
             this.redisKey(userId, sessionId),
             hashed,
             'EX',
-            this.REFRESH_TTL_SECONDS,
+            REFRESH_TOKEN_TTL_SECONDS,
         );
 
         return { token, sessionId };

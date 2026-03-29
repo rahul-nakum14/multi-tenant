@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { Request } from 'express';
@@ -6,6 +6,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
+import { ACCESS_TOKEN_COOKIE } from '../../../common/constants';
 import type { JwtPayload, AuthenticatedUser } from '../interfaces/jwt-payload.interface';
 
 @Injectable()
@@ -21,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
-                (request: Request) => request?.cookies?.['access_token'],
+                (request: Request) => request?.cookies?.[ACCESS_TOKEN_COOKIE] ?? null,
             ]),
             ignoreExpiration: false,
             secretOrKey: publicKey,
@@ -32,11 +33,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     async validate(req: Request, payload: JwtPayload): Promise<AuthenticatedUser> {
         if (!payload.tenant_id) {
-            throw new Error('JWT missing tenant_id');
+            throw new UnauthorizedException('JWT missing tenant_id');
         }
 
         const user = await this.authService.validateUser(payload.sub, payload.tenant_id);
-
         req.tenantId = user.tenantId;
 
         return user;
