@@ -1,21 +1,20 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { RedisService } from './redis.service';
 
 export const REDIS_CLIENT = 'REDIS_CLIENT';
 
 @Global()
 @Module({
     providers: [
+        RedisService,
         {
             provide: REDIS_CLIENT,
-            inject: [ConfigService],
-            useFactory: (configService: ConfigService) => {
-                const redisUrl = configService.get<string>('app.redis.url')!;
-                return new Redis(redisUrl);
-            },
+            inject: [RedisService],
+            useFactory: (redisService: RedisService): Redis => redisService.client,
         },
     ],
-    exports: [REDIS_CLIENT],
+    exports: [RedisService, REDIS_CLIENT],
 })
 export class RedisModule { }

@@ -5,6 +5,7 @@ import * as winston from 'winston';
 import appConfig from './common/config/app.config';
 import { validationSchema } from './common/config/validation.schema';
 import { DatabaseModule } from './infra/database/database.module';
+import { PrismaModule } from './infra/database/prisma.module';
 import { RedisModule } from './infra/redis/redis.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -19,9 +20,7 @@ import { TenantContextMiddleware } from './common/middleware/tenant-context.midd
       isGlobal: true,
       load: [appConfig],
       validationSchema,
-      validationOptions: {
-        abortEarly: true,
-      },
+      validationOptions: { abortEarly: true },
     }),
     WinstonModule.forRoot({
       format: winston.format.combine(
@@ -42,6 +41,7 @@ import { TenantContextMiddleware } from './common/middleware/tenant-context.midd
       ],
     }),
     DatabaseModule,
+    PrismaModule,
     RedisModule,
     HealthModule,
     AuthModule,
