@@ -1,20 +1,19 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import {
     HealthCheck,
     HealthCheckService,
-    TypeOrmHealthIndicator,
     HealthCheckResult,
     HealthIndicatorResult,
 } from '@nestjs/terminus';
-import Redis from 'ioredis';
-import { REDIS_CLIENT } from '../../infra/redis/redis.module';
+import { PrismaService } from '../../infra/database/prisma.service';
+import { RedisService } from '../../infra/redis/redis.service';
 
 @Controller('health')
 export class HealthController {
     constructor(
         private readonly health: HealthCheckService,
-        private readonly db: TypeOrmHealthIndicator,
-        @Inject(REDIS_CLIENT) private readonly redis: Redis,
+        private readonly prisma: PrismaService,
+        private readonly redis: RedisService,
     ) { }
 
     @Get()
@@ -26,17 +25,20 @@ export class HealthController {
     @HealthCheck()
     readiness(): Promise<HealthCheckResult> {
         return this.health.check([
-            () => this.db.pingCheck('database'),
+            () => this.checkDatabase(),
             () => this.checkRedis(),
         ]);
     }
 
+    private async checkDatabase(): Promise<HealthIndicatorResult> {
+        const isUp = await this.prisma.healthCheck();
+        if (!isUp) throw new Error('Database unreachable');
+        return { database: { status: 'up' } };
+    }
+
     private async checkRedis(): Promise<HealthIndicatorResult> {
-        try {
-            await this.redis.ping();
-            return { redis: { status: 'up' } };
-        } catch {
-            return { redis: { status: 'down' } };
-        }
+        const isUp = await this.redis.healthCheck();
+        if (!isUp) throw new Error('Redis unreachable');
+        return { redis: { status: 'up' } };
     }
 }

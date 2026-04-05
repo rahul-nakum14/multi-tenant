@@ -1,0 +1,17 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Placeholder model — real schema models will be added in the next phase.
+// This allows `prisma generate` to produce a valid PrismaClient.
+model _Placeholder {
+  id Int @id @default(autoincrement())
+
+  @@map("_schema_placeholder")
+  @@ignore
+}
