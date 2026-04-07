@@ -4,5 +4,73 @@ package identity.v1;
 
 option go_package = "github.com/saas/proto/identity/v1;identityv1";
 
-// Placeholder for identity service proto definitions
-// Will include: User, Organization, tenant management RPCs
+service IdentityService {
+  rpc CreateUser              (CreateUserRequest)              returns (CreateUserResponse)              {}
+  rpc GetUser                 (GetUserRequest)                 returns (GetUserResponse)                 {}
+  rpc CreateOrganization      (CreateOrganizationRequest)      returns (CreateOrganizationResponse)      {}
+  rpc AddUserToOrganization   (AddUserToOrganizationRequest)   returns (AddUserToOrganizationResponse)   {}
+  rpc ListUserOrganizations   (ListUserOrganizationsRequest)   returns (ListUserOrganizationsResponse)   {}
+}
+
+message User {
+  string id         = 1;
+  string tenant_id  = 2;
+  string email      = 3;
+  string first_name = 4;
+  string last_name  = 5;
+  string role       = 6;
+  string created_at = 7;
+}
+
+message Organization {
+  string id         = 1;
+  string tenant_id  = 2;
+  string name       = 3;
+  string created_at = 4;
+}
+
+message CreateUserRequest {
+  string tenant_id      = 1;
+  string email          = 2;
+  string first_name     = 3;
+  string last_name      = 4;
+  string password_hash  = 5;
+  string role           = 6;
+}
+message CreateUserResponse {
+  User user = 1;
+}
+
+message GetUserRequest {
+  string tenant_id = 1;
+  string user_id   = 2;
+}
+message GetUserResponse {
+  User user = 1;
+}
+
+message CreateOrganizationRequest {
+  string tenant_id = 1;
+  string name      = 2;
+}
+message CreateOrganizationResponse {
+  Organization organization = 1;
+}
+
+message AddUserToOrganizationRequest {
+  string tenant_id        = 1;
+  string user_id          = 2;
+  string organization_id  = 3;
+  string role             = 4;
+}
+message AddUserToOrganizationResponse {
+  bool success = 1;
+}
+
+message ListUserOrganizationsRequest {
+  string tenant_id = 1;
+  string user_id   = 2;
+}
+message ListUserOrganizationsResponse {
+  repeated Organization organizations = 1;
+}
